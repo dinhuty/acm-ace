@@ -24,6 +24,8 @@ const en = {
   "auth.edit": "Edit",
   "auth.error_required": "Email and password are required.",
   "auth.error_short_password": "Password must be at least 8 characters.",
+  "auth.continue_with_google": "Continue with Google",
+  "auth.or": "or",
 
   // Login
   "login.title": "Management",
@@ -67,6 +69,8 @@ const vi: Record<keyof typeof en, string> = {
     "Cần nhập email và mật khẩu.",
   "auth.error_short_password":
     "Mật khẩu phải có ít nhất 8 ký tự.",
+  "auth.continue_with_google": "Tiếp tục với Google",
+  "auth.or": "hoặc",
 
   // Login
   "login.title": "Quản lý",

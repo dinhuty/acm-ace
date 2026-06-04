@@ -3,6 +3,7 @@
 import { type FormEvent, useActionState, useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
+import { GoogleSignInButton } from "@/components/atoms/GoogleSignInButton";
 import { FormField } from "@/components/molecules/FormField";
 import { signIn, type SignInState } from "@/app/login/actions";
 import { useT } from "@/lib/i18n/client";
@@ -42,7 +43,14 @@ export function LoginForm({ next }: Props) {
 
       {step === "email" ? (
         <>
+          <GoogleSignInButton next={next} />
+          <div className="flex items-center gap-md text-caption text-ink-muted-80">
+            <div className="flex-1 h-px bg-hairline" />
+            <span>{t("auth.or")}</span>
+            <div className="flex-1 h-px bg-hairline" />
+          </div>
           <FormField
+            key="email"
             label={t("auth.email")}
             name="email"
             type="email"
@@ -80,6 +88,7 @@ export function LoginForm({ next }: Props) {
             </button>
           </div>
           <FormField
+            key="password"
             label={t("auth.password")}
             name="password"
             type="password"

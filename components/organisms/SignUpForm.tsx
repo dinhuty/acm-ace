@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
+import { GoogleSignInButton } from "@/components/atoms/GoogleSignInButton";
 import { FormField } from "@/components/molecules/FormField";
 import { signUp, type SignUpState } from "@/app/login/actions";
 import { useT } from "@/lib/i18n/client";
@@ -15,6 +16,12 @@ export function SignUpForm() {
 
   return (
     <form action={formAction} className="w-full flex flex-col gap-lg">
+      <GoogleSignInButton />
+      <div className="flex items-center gap-md text-caption text-ink-muted-80">
+        <div className="flex-1 h-px bg-hairline" />
+        <span>{t("auth.or")}</span>
+        <div className="flex-1 h-px bg-hairline" />
+      </div>
       <FormField
         label={t("auth.email")}
         name="email"
