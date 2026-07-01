@@ -4,15 +4,16 @@ services:
     container_name: zen-db
     restart: unless-stopped
     ports:
-      - "5450:5432"
+      - "${DB_PORT:-5450}:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: zen
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-zen}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d zen"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-zen}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,10 +23,10 @@ services:
     container_name: zen-app
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "${APP_PORT:-3021}:3021"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/zen
-      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/zen}
+      NODE_ENV: ${NODE_ENV:-production}
     depends_on:
       db:
         condition: service_healthy

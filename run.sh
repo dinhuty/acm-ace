@@ -39,7 +39,7 @@ cmd_help() {
 Usage: bash run.sh <command> [args...]
 
 App lifecycle:
-  start              yarn dev (http://localhost:3002)
+  start              yarn dev (http://localhost:3021)
   build              next build
   prod               yarn build && yarn start
   lint               yarn lint
@@ -54,7 +54,9 @@ Database (Postgres in Docker + Drizzle):
   seed               Run db/seed.ts (tsx).
 
 Deployment:
-  deploy             Build and run the full stack (app + db) via Docker Compose.
+  deploy             Build and run the full stack (app + db) locally via Docker Compose.
+  deploy-prd [branch]  Copy .env.production -> server .env, then git pull (default: main)
+                     + rebuild the stack. Reads SSH_SERVER/USER/PASSWORD from .env (needs sshpass).
 
   help               Show this message.
 EOF
@@ -97,8 +99,50 @@ cmd_deploy() {
   require_docker
   echo "→ docker compose up -d --build"
   docker compose up -d --build
-  echo "App:      http://localhost:3002"
+  echo "App:      http://localhost:3021"
   echo "Postgres: localhost:5450"
+}
+
+# Read a single KEY=VALUE from .env without sourcing it (the file may contain
+# non KEY=VALUE lines that `source` would try to execute).
+read_env_var() {
+  local key="$1"
+  # Strip only a MATCHED wrapping quote pair (keep genuine boundary quotes).
+  # Trailing `|| true`: a missing key makes grep exit 1, which would abort the
+  # script under `set -o pipefail` before callers can check for an empty value.
+  grep -E "^${key}=" .env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\r' \
+    | sed -E -e 's/^"(.*)"$/\1/' -e "s/^'(.*)'\$/\1/" || true
+}
+
+# Production deploy target on the server (relative to the SSH user's home).
+REMOTE_DIR="acm-tool"
+
+cmd_deploy_prd() {
+  local branch="${1:-main}"
+  local env_prod=".env.production"
+
+  [[ -f "$env_prod" ]] || { echo "Error: $env_prod not found (create it on your machine)." >&2; exit 1; }
+  command -v sshpass >/dev/null 2>&1 || { echo "Error: sshpass not installed (macOS: brew install hudochenkov/sshpass/sshpass)." >&2; exit 1; }
+
+  local ssh_host ssh_user ssh_pass
+  ssh_host="$(read_env_var SSH_SERVER)"
+  ssh_user="$(read_env_var SSH_USER)"
+  ssh_pass="$(read_env_var SSH_PASSWORD)"
+  [[ -n "$ssh_host" && -n "$ssh_user" && -n "$ssh_pass" ]] \
+    || { echo "Error: set SSH_SERVER / SSH_USER / SSH_PASSWORD in .env." >&2; exit 1; }
+
+  # sshpass reads the password from SSHPASS (-e) so it never shows up in `ps`.
+  export SSHPASS="$ssh_pass"
+
+  echo "→ Copying $env_prod → server ~/$REMOTE_DIR/.env…"
+  sshpass -e scp -o StrictHostKeyChecking=accept-new "$env_prod" "$ssh_user@$ssh_host:$REMOTE_DIR/.env"
+
+  echo "→ git pull ($branch) + rebuild on the server…"
+  sshpass -e ssh -o StrictHostKeyChecking=accept-new "$ssh_user@$ssh_host" \
+    "set -e; cd \"$REMOTE_DIR\" && git fetch origin && git checkout -f -B \"$branch\" \"origin/$branch\" && docker compose up -d --build && docker compose ps"
+
+  unset SSHPASS
+  echo "Done. App: http://$ssh_host:${APP_PORT:-3021} · Postgres: $ssh_host:${DB_PORT:-5450}"
 }
 
 case "$CMD" in
@@ -114,6 +158,7 @@ case "$CMD" in
   migrate)        cmd_migrate ;;
   seed)           cmd_seed ;;
   deploy)         cmd_deploy ;;
+  deploy-prd)     cmd_deploy_prd "$@" ;;
   help|-h|--help) cmd_help ;;
   *)
     echo "Unknown command: $CMD" >&2
