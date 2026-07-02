@@ -27,7 +27,7 @@ function ToolCard({ tool }: { tool: Tool }) {
   const body = (
     <div
       className={`flex h-full flex-col gap-xs rounded-lg border border-hairline bg-canvas p-lg transition-colors ${
-        tool.href ? "hover:border-brand-green" : "opacity-60"
+        tool.href ? "hover:border-primary" : "opacity-60"
       }`}
     >
       <div className="flex items-center justify-between gap-sm">

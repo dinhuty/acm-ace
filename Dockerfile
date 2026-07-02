@@ -31,7 +31,10 @@ FROM deps AS migrator
 WORKDIR /app
 COPY drizzle.config.ts ./
 COPY db ./db
-CMD ["yarn", "db:migrate"]
+COPY lib ./lib
+# Chạy migration rồi seed template khởi đầu. Seed idempotent (onConflictDoNothing
+# theo name) nên chạy lại mỗi lần deploy vẫn an toàn, không tạo bản ghi trùng.
+CMD ["sh", "-c", "yarn db:migrate && yarn db:seed"]
 
 # ----- runner: minimal runtime image -----
 FROM node:22-alpine AS runner

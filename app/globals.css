@@ -22,8 +22,9 @@
 
   /* ----- Colors ----- */
 
-  /* Brand & accent — Mintlify mint carries the accent voltage */
-  --color-primary: #0a0a0a;
+  /* Brand & accent — màu chủ đạo là xanh #00836b (per yêu cầu) */
+  --color-primary: #00836b;
+  --color-primary-hover: #006b57;
   --color-on-primary: #ffffff;
   --color-brand-green: #00d4a4;
   --color-brand-green-deep: #00b48a;

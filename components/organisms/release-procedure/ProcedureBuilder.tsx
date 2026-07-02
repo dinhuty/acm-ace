@@ -21,7 +21,10 @@ import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { TextArea } from "@/components/atoms/TextArea";
 import { Label } from "@/components/atoms/Label";
+import { Select } from "@/components/atoms/Select";
+import { Combobox } from "@/components/atoms/Combobox";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
+import { KNOWN_REPOS } from "@/lib/release-procedure/constants";
 import { MarkdownPreview } from "@/components/organisms/release-procedure/MarkdownPreview";
 
 export type TemplateLite = {
@@ -215,15 +218,14 @@ export function ProcedureBuilder({ templates, initial }: Props) {
             <div className="flex flex-col gap-xs">
               {branches.map((b, i) => (
                 <div key={i} className="flex gap-xs">
-                  <Input
+                  <Combobox
                     value={b.repo}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setBranches((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, repo: e.target.value } : x,
-                        ),
+                        p.map((x, j) => (j === i ? { ...x, repo: v } : x)),
                       )
                     }
+                    options={KNOWN_REPOS}
                     placeholder="repo (acm-api)"
                   />
                   <Input
@@ -268,22 +270,18 @@ export function ProcedureBuilder({ templates, initial }: Props) {
         <div className="flex flex-col gap-sm rounded-lg border border-hairline bg-canvas p-md">
           <h2 className="text-heading-5 text-ink">Add template block</h2>
           <div className="flex gap-xs">
-            <select
+            <Select
               value={pickId}
-              onChange={(e) => setPickId(e.target.value)}
-              className="h-12 w-full rounded-md border border-hairline bg-canvas px-sm text-body-md text-ink outline-none focus:border-primary"
-            >
-              <option value="">Select a template…</option>
-              {grouped.map(([cat, list]) => (
-                <optgroup key={cat} label={cat}>
-                  {list.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              onChange={setPickId}
+              placeholder="Chọn template…"
+              groups={grouped.map(([cat, list]) => ({
+                label: cat,
+                options: list.map((t) => ({
+                  value: String(t.id),
+                  label: t.name,
+                })),
+              }))}
+            />
             <Button type="button" onClick={addTemplate} disabled={!pickId}>
               Add
             </Button>

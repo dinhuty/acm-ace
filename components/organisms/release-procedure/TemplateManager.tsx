@@ -12,8 +12,10 @@ import type { TemplateLite } from "@/components/organisms/release-procedure/Proc
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { TextArea } from "@/components/atoms/TextArea";
+import { Combobox } from "@/components/atoms/Combobox";
 import { FormField } from "@/components/molecules/FormField";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
+import { KNOWN_REPOS, KNOWN_CATEGORIES } from "@/lib/release-procedure/constants";
 
 type EditState = { mode: "new" } | { mode: "edit"; template: TemplateLite } | null;
 
@@ -148,16 +150,17 @@ function TemplateForm({
   }
 
   return (
-    <div className="flex flex-col gap-md rounded-lg border border-brand-green bg-canvas p-lg">
+    <div className="flex flex-col gap-md rounded-lg border border-primary bg-canvas p-lg">
       <h3 className="text-heading-5 text-ink">
         {initial ? "Edit template" : "New template"}
       </h3>
       <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
         <FormField label="Category" htmlFor="tpl-category">
-          <Input
+          <Combobox
             id="tpl-category"
             value={form.category}
-            onChange={(e) => set("category", e.target.value)}
+            onChange={(v) => set("category", v)}
+            options={KNOWN_CATEGORIES}
             placeholder="Common"
           />
         </FormField>
@@ -172,12 +175,13 @@ function TemplateForm({
         <FormField
           label="Repo"
           htmlFor="tpl-repo"
-          hint="Enables ${repo}/${pr}/${pr_url}"
+          hint="Bật ${repo}/${pr}/${pr_url}"
         >
-          <Input
+          <Combobox
             id="tpl-repo"
             value={form.repo}
-            onChange={(e) => set("repo", e.target.value)}
+            onChange={(v) => set("repo", v)}
+            options={KNOWN_REPOS}
             placeholder="acm-api"
           />
         </FormField>

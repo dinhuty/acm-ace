@@ -49,7 +49,7 @@ export default async function ReleaseProcedureHome() {
             <Link
               key={p.id}
               href={`/release-procedure/${p.id}`}
-              className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md transition-colors hover:border-brand-green"
+              className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md transition-colors hover:border-primary"
             >
               <span className="text-body-md-medium text-ink">{p.title}</span>
               <span className="flex items-center gap-sm text-caption text-stone">
