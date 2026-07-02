@@ -13,6 +13,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN yarn build
 
+# ----- dev: live-reload server; source + node_modules are bind/volume-mounted
+#        at runtime (see docker-compose.dev.yml). No app code is copied in. -----
+FROM node:22-alpine AS dev
+# libc6-compat lets Next's SWC/Turbopack native binaries load on Alpine (musl).
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+ENV NODE_ENV=development
+EXPOSE 3021
+# compose overrides this to `yarn install && next dev` against the mounted source.
+CMD ["yarn", "dev"]
+
 # ----- runner: minimal runtime image -----
 FROM node:22-alpine AS runner
 WORKDIR /app
