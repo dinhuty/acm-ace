@@ -22,6 +22,13 @@
       "when": 1783052377506,
       "tag": "0002_superb_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783060147644,
+      "tag": "0003_fast_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

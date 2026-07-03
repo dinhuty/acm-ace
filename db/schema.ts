@@ -116,7 +116,31 @@ export const sqlSnippets = pgTable(
   (t) => [unique("sql_snippets_category_title_unique").on(t.category, t.title)],
 );
 
+// Personal task tracker — each row is private to its owner (`user_id`); the
+// tool always queries scoped to the current user.
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  slackTaskUrl: text("slack_task_url").notNull().default(""),
+  slackReviewUrl: text("slack_review_url").notNull().default(""),
+  procedureId: integer("procedure_id").references(() => releaseProcedures.id, {
+    onDelete: "set null",
+  }),
+  docUrl: text("doc_url").notNull().default(""),
+  note: text("note").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type ReleaseTemplate = typeof releaseTemplates.$inferSelect;
 export type ReleaseProcedure = typeof releaseProcedures.$inferSelect;
 export type SqlSnippet = typeof sqlSnippets.$inferSelect;
+export type Task = typeof tasks.$inferSelect;

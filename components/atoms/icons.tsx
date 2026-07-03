@@ -53,6 +53,31 @@ export function SqlIcon({ className, ...props }: IconProps) {
   );
 }
 
+/** Task Manager — icon nhiều màu (gradient tím→hồng) cho nổi bật. */
+export function TaskIcon({ className, ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} {...props}>
+      <defs>
+        <linearGradient id="zen-task-grad" x1="2" y1="2" x2="22" y2="22"
+          gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#7c3aed" />
+          <stop offset="0.55" stopColor="#d946ef" />
+          <stop offset="1" stopColor="#f97316" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="3" width="18" height="18" rx="5.5" fill="url(#zen-task-grad)" />
+      <path d="M6.8 9.1l1.5 1.5 3-3.2" stroke="#fff" strokeWidth="1.7" fill="none"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.6 8.4h3.6" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="1.7"
+        strokeLinecap="round" />
+      <path d="M6.8 14.9l1.5 1.5 3-3.2" stroke="#bbf7d0" strokeWidth="1.7" fill="none"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.6 14.2h3.6" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="1.7"
+        strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** Env Diff — hai mũi tên lên/xuống so sánh. */
 export function DiffIcon({ className, ...props }: IconProps) {
   return (
