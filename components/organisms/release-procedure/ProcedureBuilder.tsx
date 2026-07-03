@@ -77,23 +77,39 @@ export function ProcedureBuilder({ templates, initial }: Props) {
   // SQL modal: which block index is being edited (null = closed) + the draft.
   const [sqlFor, setSqlFor] = useState<number | null>(null);
   const [sqlDraft, setSqlDraft] = useState("");
+  // Collapse all block bodies to make drag-reordering easier.
+  const [collapsed, setCollapsed] = useState(false);
+  // Last caret/selection per block textarea → "+ Chèn SQL" inserts right there.
+  const selRef = useRef<Record<number, { start: number; end: number }>>({});
 
   function insertSql() {
     if (sqlFor === null) return;
-    const sql = sqlDraft.replace(/\s+$/, "").replace(/^\n+/, "");
+    const i = sqlFor;
+    const sql = sqlDraft.replace(/\n+$/, "").replace(/^\n+/, "");
     if (!sql) {
       setSqlFor(null);
       return;
     }
-    // Insert as a top-level fenced block (column 0) so nested-list indentation
-    // can never break the code fence — the format stays valid regardless.
-    const fenced = "```sql\n" + sql + "\n```";
     setBlocks((prev) =>
-      prev.map((x, j) =>
-        j === sqlFor
-          ? { ...x, body: `${x.body.replace(/\s+$/, "")}\n\n${fenced}\n` }
-          : x,
-      ),
+      prev.map((x, j) => {
+        if (j !== i) return x;
+        const body = x.body;
+        const sel = selRef.current[i];
+        const start = Math.min(sel?.start ?? body.length, body.length);
+        const end = Math.min(sel?.end ?? body.length, body.length);
+        // Indent continuation lines to the caret line's indentation so a
+        // multi-line paste stays valid inside a (possibly nested) code fence.
+        const lineStart = body.lastIndexOf("\n", start - 1) + 1;
+        const indent = body.slice(lineStart).match(/^[ \t]*/)?.[0] ?? "";
+        const inserted = sql
+          .split("\n")
+          .map((ln, idx) => (idx === 0 ? ln : indent + ln))
+          .join("\n");
+        return {
+          ...x,
+          body: body.slice(0, start) + inserted + body.slice(end),
+        };
+      }),
     );
     setSqlFor(null);
     setSqlDraft("");
@@ -341,9 +357,20 @@ export function ProcedureBuilder({ templates, initial }: Props) {
 
         {/* Blocks (drag to reorder) */}
         <div className="flex flex-col gap-sm">
-          <h2 className="text-heading-5 text-ink">
-            Steps ({blocks.length}) — drag to reorder
-          </h2>
+          <div className="flex items-center justify-between gap-sm">
+            <h2 className="text-heading-5 text-ink">
+              Steps ({blocks.length}) — drag to reorder
+            </h2>
+            {blocks.length > 0 ? (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+              >
+                {collapsed ? "Mở rộng" : "Thu gọn"}
+              </Button>
+            ) : null}
+          </div>
           {blocks.map((block, i) => (
             <div
               key={i}
@@ -393,30 +420,51 @@ export function ProcedureBuilder({ templates, initial }: Props) {
                   Remove
                 </Button>
               </div>
-              <TextArea
-                mono
-                rows={Math.min(16, Math.max(4, block.body.split("\n").length))}
-                value={block.body}
-                onChange={(e) =>
-                  setBlocks((p) =>
-                    p.map((x, j) =>
-                      j === i ? { ...x, body: e.target.value } : x,
-                    ),
-                  )
-                }
-              />
-              <div className="flex justify-end">
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={() => {
-                    setSqlDraft("");
-                    setSqlFor(i);
-                  }}
-                >
-                  + Chèn SQL
-                </Button>
-              </div>
+              {!collapsed ? (
+                <>
+                  <TextArea
+                    mono
+                    rows={Math.min(
+                      16,
+                      Math.max(4, block.body.split("\n").length),
+                    )}
+                    value={block.body}
+                    onSelect={(e) => {
+                      selRef.current[i] = {
+                        start: e.currentTarget.selectionStart,
+                        end: e.currentTarget.selectionEnd,
+                      };
+                    }}
+                    onBlur={(e) => {
+                      selRef.current[i] = {
+                        start: e.currentTarget.selectionStart,
+                        end: e.currentTarget.selectionEnd,
+                      };
+                    }}
+                    onChange={(e) =>
+                      setBlocks((p) =>
+                        p.map((x, j) =>
+                          j === i ? { ...x, body: e.target.value } : x,
+                        ),
+                      )
+                    }
+                  />
+                  {/sql/i.test(block.name) ? (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => {
+                          setSqlDraft("");
+                          setSqlFor(i);
+                        }}
+                      >
+                        + Chèn SQL
+                      </Button>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           ))}
         </div>
@@ -472,7 +520,7 @@ export function ProcedureBuilder({ templates, initial }: Props) {
           </div>
         </div>
         <ErrorMessage>{error}</ErrorMessage>
-        <div className="max-h-[70vh] overflow-auto rounded-lg border border-hairline bg-canvas p-md">
+        <div className="max-h-[calc(100vh-9rem)] overflow-auto rounded-lg border border-hairline bg-canvas p-md">
           {showRaw ? (
             <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-code-sm text-slate">
               {markdown}
@@ -489,8 +537,8 @@ export function ProcedureBuilder({ templates, initial }: Props) {
         title="Nhập SQL"
       >
         <p className="text-caption text-stone">
-          Dán SQL vào đây — sẽ được chèn thành một khối code SQL đúng định dạng,
-          tránh lỗi xuống dòng khi dán thẳng vào block.
+          Dán SQL vào đây — sẽ được chèn vào đúng vị trí con trỏ trong block, tự
+          canh lề theo code fence nên không vỡ định dạng khi nhiều dòng.
         </p>
         <TextArea
           mono
