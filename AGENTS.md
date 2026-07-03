@@ -44,4 +44,5 @@ Do **not** bypass without explicit user permission. See [docs/operation.md](docs
 - **Use yarn** — `yarn.lock` is committed; do not switch to npm or pnpm.
 - **Node version** — Use the version expected by the project; if commands fail, check Node version compatibility.
 - **Dev/start port** — Pinned to `3002` in `package.json` scripts. Use `http://localhost:3002` when verifying.
+- **Icons** — No emoji as UI icons (`✅ 🚀 🇯🇵 …`). Use SVGs in `components/atoms/icons.tsx`; convey state with colour + text. See [Iconography](docs/core-principles-and-coding-standards/coding-conventions.md#iconography).
 - **Security** — Use environment variables (`.env.local`, `.env.*`); never commit secrets.

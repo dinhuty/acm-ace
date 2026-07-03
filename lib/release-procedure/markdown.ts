@@ -8,9 +8,9 @@ import type {
 export const GITHUB_ORG = "https://github.com/air-closet";
 
 export const LANGUAGES: { value: ProcedureLanguage; label: string }[] = [
-  { value: "ja", label: "🇯🇵 日本語" },
-  { value: "en", label: "🇺🇸 English" },
-  { value: "vi", label: "🇻🇳 Tiếng Việt" },
+  { value: "ja", label: "日本語" },
+  { value: "en", label: "English" },
+  { value: "vi", label: "Tiếng Việt" },
 ];
 
 // Placeholder names the builder fills automatically — never shown as manual

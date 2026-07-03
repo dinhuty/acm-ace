@@ -55,7 +55,7 @@ function TagChip({ tag }: { tag: string }) {
           : "inline-flex items-center rounded-full bg-surface px-sm py-xxs text-caption text-steel"
       }
     >
-      {isRelease ? "✅ released" : `#${tag}`}
+      {isRelease ? "released" : `#${tag}`}
     </span>
   );
 }
@@ -192,7 +192,7 @@ export function TaskManager({
                   href={`/release-procedure/${t.procedureId}`}
                   className="text-body-sm text-primary underline"
                 >
-                  🚀 {procTitle.get(t.procedureId) ?? "Release procedure"}
+                  {procTitle.get(t.procedureId) ?? "Release procedure"}
                 </Link>
               ) : null}
 
@@ -500,7 +500,7 @@ function TagInput({
               key={t}
               className="inline-flex items-center gap-xxs rounded-full bg-surface px-sm py-xxs text-caption text-slate"
             >
-              {t === RELEASE_TAG ? "✅ released" : `#${t}`}
+              {t === RELEASE_TAG ? "released" : `#${t}`}
               <button
                 type="button"
                 onClick={() => onChange(tags.filter((x) => x !== t))}

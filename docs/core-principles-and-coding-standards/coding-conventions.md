@@ -45,6 +45,19 @@ Conventions for routing, components, data flow, styling, and config in ad-manage
 - Follow [DESIGN.md](../../DESIGN.md) (project root, managed by `getdesign` CLI) for tokens, spacing scale, typography, and component-level conventions.
 - Avoid inline `style={{ ... }}` for things Tailwind can express. Reserve it for truly dynamic values.
 
+## Iconography
+
+**Không dùng emoji làm icon trong UI** (`✅ 🚀 🎨 🇯🇵 …`). Emoji render khác nhau giữa OS/trình duyệt, không đổi màu theo theme, và tạo cảm giác "AI-generated". Trạng thái/ý nghĩa phải thể hiện bằng **màu + chữ**, không bằng emoji (vd tag `release` = chip xanh chữ "released", không phải `✅`).
+
+- **Icon UI = SVG** khai báo trong [`components/atoms/icons.tsx`](../../../components/atoms/icons.tsx): dùng `currentColor` (đổi màu qua `text-*`), nhận `className` để chỉnh kích thước. Không hardcode màu trừ icon thương hiệu (vd `BacklogIcon`).
+- **Ký tự typographic đơn sắc** được phép cho affordance nhỏ: mũi tên (`‹ › ← →`), đóng (`✕`), link ngoài (`↗`), xác nhận (`✓`), tay kéo (`⠿`). Không dùng bản emoji màu của chúng.
+- **Cần icon/ảnh minh hoạ phức tạp** (logo, illustration): tự generate thành **file trong `public/`** rồi import như asset — không nhúng emoji. Tiêu chí file:
+  1. Định dạng **SVG** (ưu tiên) hoặc PNG nền trong suốt.
+  2. Phong cách **line / geometric tối giản**, 1–2 màu lấy từ palette trong [DESIGN.md](../../../DESIGN.md).
+  3. `viewBox` vuông, canh giữa, không phụ thuộc kích thước cố định.
+  4. Tên file kebab-case mô tả rõ (vd `release-flow.svg`).
+- **Nội dung master data** (body template release, SQL snippet…) không bị ràng buộc bởi rule này — giữ nguyên ký tự tác giả đã viết.
+
 ## Form patterns (Apple HIG)
 
 Form UI in this project follows Apple HIG conventions for text fields. Reference: [Apple HIG — Text fields](https://developer.apple.com/design/human-interface-guidelines/text-fields). The same rules are baked into [`Input`](../../../components/atoms/Input.tsx) and [`FormField`](../../../components/molecules/FormField.tsx).

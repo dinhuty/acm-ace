@@ -216,7 +216,7 @@ function TemplateForm({
         <code className="font-mono">{"${branch}"}</code>{" "}
         <code className="font-mono">{"${custom}"}</code>.
       </p>
-      <FormField label="Body — 🇯🇵 日本語" htmlFor="tpl-ja">
+      <FormField label="Body — 日本語 (JA)" htmlFor="tpl-ja">
         <TextArea
           id="tpl-ja"
           mono
@@ -225,7 +225,7 @@ function TemplateForm({
           onChange={(e) => set("bodyJa", e.target.value)}
         />
       </FormField>
-      <FormField label="Body — 🇺🇸 English" htmlFor="tpl-en">
+      <FormField label="Body — English (EN)" htmlFor="tpl-en">
         <TextArea
           id="tpl-en"
           mono
@@ -234,7 +234,7 @@ function TemplateForm({
           onChange={(e) => set("bodyEn", e.target.value)}
         />
       </FormField>
-      <FormField label="Body — 🇻🇳 Tiếng Việt" htmlFor="tpl-vi">
+      <FormField label="Body — Tiếng Việt (VI)" htmlFor="tpl-vi">
         <TextArea
           id="tpl-vi"
           mono

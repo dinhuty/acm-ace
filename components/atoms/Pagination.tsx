@@ -22,16 +22,18 @@ export function Pagination({ page, totalPages, total, onPage }: Props) {
           type="button"
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
+          aria-label="Trang trước"
         >
-          ‹ Trước
+          ‹
         </Button>
         <Button
           variant="secondary"
           type="button"
           disabled={page >= totalPages}
           onClick={() => onPage(page + 1)}
+          aria-label="Trang sau"
         >
-          Sau ›
+          ›
         </Button>
       </div>
     </div>
