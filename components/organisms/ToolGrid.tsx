@@ -19,8 +19,10 @@ const TOOLS: Tool[] = [
   },
   {
     name: "SQL Runner",
-    description: "Chạy các đoạn SQL trên database đã cấu hình.",
+    description:
+      "Thư viện SQL snippet (theo acm-tools) để copy về máy tự chạy. Thêm/sửa/xoá được.",
     icon: SqlIcon,
+    href: "/sql-runner",
   },
   {
     name: "Env Diff",

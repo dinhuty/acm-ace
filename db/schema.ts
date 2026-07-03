@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -93,6 +94,29 @@ export const releaseProcedures = pgTable("release_procedures", {
     .notNull(),
 });
 
+// Shared master data for the SQL Runner tool: a library of SQL snippets to
+// copy & run locally (no execution here). Cloned from acm-tools/database.
+export const sqlSnippets = pgTable(
+  "sql_snippets",
+  {
+    id: serial("id").primaryKey(),
+    category: text("category").notNull().default(""),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedBy: integer("updated_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [unique("sql_snippets_category_title_unique").on(t.category, t.title)],
+);
+
 export type User = typeof users.$inferSelect;
 export type ReleaseTemplate = typeof releaseTemplates.$inferSelect;
 export type ReleaseProcedure = typeof releaseProcedures.$inferSelect;
+export type SqlSnippet = typeof sqlSnippets.$inferSelect;

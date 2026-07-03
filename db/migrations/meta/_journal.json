@@ -15,6 +15,13 @@
       "when": 1782982978159,
       "tag": "0001_typical_puck",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783052377506,
+      "tag": "0002_superb_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

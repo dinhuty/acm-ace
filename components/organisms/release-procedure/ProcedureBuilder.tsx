@@ -248,13 +248,14 @@ export function ProcedureBuilder({ templates, initial }: Props) {
             </Button>
           </div>
           <p className="text-caption text-stone">
-            Fills <code className="font-mono">{"${pr_list}"}</code>,{" "}
-            <code className="font-mono">{"${pr_url}"}</code> and per-repo{" "}
-            <code className="font-mono">{"${pr}"}</code>/
-            <code className="font-mono">{"${branch}"}</code>.
+            Nhập repo + số PR → tự điền{" "}
+            <code className="font-mono">{"${pr_list}"}</code>,{" "}
+            <code className="font-mono">{"${pr_url}"}</code>,{" "}
+            <code className="font-mono">{"${pr}"}</code> (theo repo). Script git
+            giữ nguyên branch gốc của template.
           </p>
           {branches.length === 0 ? (
-            <p className="text-body-sm text-muted">No release branches yet.</p>
+            <p className="text-body-sm text-muted">Chưa có branch nào.</p>
           ) : (
             <div className="flex flex-col gap-xs">
               {branches.map((b, i) => (
@@ -270,17 +271,6 @@ export function ProcedureBuilder({ templates, initial }: Props) {
                     placeholder="repo (acm-api)"
                   />
                   <Input
-                    value={b.branch}
-                    onChange={(e) =>
-                      setBranches((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, branch: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="branch"
-                  />
-                  <Input
                     value={b.pr}
                     onChange={(e) =>
                       setBranches((p) =>
@@ -289,8 +279,8 @@ export function ProcedureBuilder({ templates, initial }: Props) {
                         ),
                       )
                     }
-                    placeholder="PR #"
-                    className="max-w-24"
+                    placeholder="Số PR (vd: 335)"
+                    className="max-w-[12rem]"
                   />
                   <Button
                     variant="ghost"

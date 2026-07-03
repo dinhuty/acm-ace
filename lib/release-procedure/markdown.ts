@@ -18,10 +18,8 @@ export const LANGUAGES: { value: ProcedureLanguage; label: string }[] = [
 export const RESERVED_VARS = new Set([
   "task",
   "pr_list",
-  "branch_list",
   "repo",
   "pr",
-  "branch",
   "pr_url",
 ]);
 
@@ -60,13 +58,9 @@ function globalVars(
   const prList = active
     .map((b) => `- ${b.repo}: ${prUrl(b.repo, b.pr)}`)
     .join("\n");
-  const branchList = active
-    .map((b) => `- ${b.repo}: ${b.branch || "?"}`)
-    .join("\n");
   return {
     task: title,
     pr_list: prList,
-    branch_list: branchList,
     ...variables.vars,
   };
 }
@@ -88,7 +82,6 @@ export function renderBlock(
     const match = branchFor(block.repo, variables.branches);
     map.repo = block.repo;
     map.pr = match?.pr ?? "";
-    map.branch = match?.branch ?? "";
     map.pr_url = prUrl(block.repo, match?.pr ?? "");
   }
   return substitute(block.body, map);
