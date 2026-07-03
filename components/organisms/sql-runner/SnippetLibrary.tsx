@@ -12,6 +12,7 @@ import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { TextArea } from "@/components/atoms/TextArea";
 import { Combobox } from "@/components/atoms/Combobox";
+import { Modal } from "@/components/atoms/Modal";
 import { FormField } from "@/components/molecules/FormField";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
 import { CopyButton } from "@/components/atoms/CopyButton";
@@ -23,12 +24,30 @@ export type Snippet = {
   body: string;
 };
 
+const PARAM_RE = /\$\{(\w+)\}/g;
+
+function detectParams(body: string): string[] {
+  const set = new Set<string>();
+  for (const m of body.matchAll(PARAM_RE)) set.add(m[1]);
+  return [...set];
+}
+
+function fillParams(body: string, values: Record<string, string>): string {
+  return body.replace(PARAM_RE, (whole, name: string) => {
+    const v = values[name];
+    return v && v.trim() !== "" ? v : whole;
+  });
+}
+
 export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(
+    snippets[0]?.id ?? null,
+  );
+  const [params, setParams] = useState<Record<string, string>>({});
   const [edit, setEdit] = useState<
     { mode: "new" } | { mode: "edit"; snippet: Snippet } | null
   >(null);
-  const [openId, setOpenId] = useState<number | null>(null);
   const router = useRouter();
 
   const categories = useMemo(
@@ -52,84 +71,196 @@ export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [snippets, query]);
 
+  // Params shared by >= 2 snippets are treated as global "context" (e.g.
+  // user_id) — set once, applied to every snippet's ${...}.
+  const contextParams = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const s of snippets) {
+      for (const p of new Set(detectParams(s.body))) {
+        count.set(p, (count.get(p) ?? 0) + 1);
+      }
+    }
+    return [...count.entries()]
+      .filter(([, n]) => n >= 2)
+      .map(([p]) => p)
+      .sort();
+  }, [snippets]);
+  const contextSet = new Set(contextParams);
+
+  const selected = snippets.find((s) => s.id === selectedId) ?? null;
+  // Per-snippet params = detected params that aren't global context.
+  const localParams = selected
+    ? detectParams(selected.body).filter((p) => !contextSet.has(p))
+    : [];
+  const generated = selected ? fillParams(selected.body, params) : "";
+
+  // Keep params across selection so context (user_id, …) persists.
+  function select(s: Snippet) {
+    setSelectedId(s.id);
+  }
+
   return (
     <div className="flex flex-col gap-lg">
-      <div className="flex flex-wrap items-center justify-between gap-sm">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm snippet (tên / category / nội dung SQL)…"
-          className="max-w-[28rem]"
-        />
-        {edit ? null : (
-          <Button type="button" onClick={() => setEdit({ mode: "new" })}>
-            + New snippet
-          </Button>
-        )}
-      </div>
-
-      {edit ? (
-        <SnippetForm
-          key={edit.mode === "edit" ? edit.snippet.id : "new"}
-          categories={categories}
-          initial={edit.mode === "edit" ? edit.snippet : undefined}
-          onDone={() => {
-            setEdit(null);
-            router.refresh();
-          }}
-          onCancel={() => setEdit(null)}
-        />
-      ) : null}
-
-      {grouped.length === 0 ? (
-        <p className="text-body-sm text-stone">Không có snippet nào khớp.</p>
-      ) : (
-        grouped.map(([cat, list]) => (
-          <div key={cat} className="flex flex-col gap-xs">
-            <h3 className="text-micro-uppercase text-stone">
-              {cat} ({list.length})
-            </h3>
-            {list.map((s) => (
-              <div
-                key={s.id}
-                className="flex flex-col gap-xs rounded-lg border border-hairline bg-canvas p-md"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-sm">
-                  <span className="text-body-md-medium text-ink">{s.title}</span>
-                  <div className="flex flex-wrap gap-xs">
-                    <CopyButton text={s.body} label="Copy SQL" />
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      onClick={() =>
-                        setOpenId((id) => (id === s.id ? null : s.id))
-                      }
-                    >
-                      {openId === s.id ? "Ẩn" : "Xem SQL"}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      onClick={() => setEdit({ mode: "edit", snippet: s })}
-                    >
-                      Edit
-                    </Button>
-                    <DeleteSnippetButton
-                      id={s.id}
-                      onDone={() => router.refresh()}
-                    />
-                  </div>
-                </div>
-                {openId === s.id ? (
-                  <pre className="overflow-x-auto whitespace-pre rounded-md bg-surface-code p-sm font-mono text-code-sm text-on-dark">
-                    {s.body}
-                  </pre>
-                ) : null}
+      {/* ---------- Context (shared params) ---------- */}
+      {contextParams.length > 0 ? (
+        <div className="flex flex-col gap-sm rounded-lg border border-hairline bg-canvas p-md">
+          <div className="flex flex-wrap items-center justify-between gap-sm">
+            <h2 className="text-heading-5 text-ink">Context</h2>
+            <p className="text-caption text-stone">
+              Điền một lần — áp dụng cho mọi snippet.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-sm sm:grid-cols-3 lg:grid-cols-4">
+            {contextParams.map((name) => (
+              <div key={name} className="flex flex-col gap-xxs">
+                <label
+                  htmlFor={`ctx-${name}`}
+                  className="font-mono text-caption text-slate"
+                >
+                  {"${" + name + "}"}
+                </label>
+                <Input
+                  id={`ctx-${name}`}
+                  value={params[name] ?? ""}
+                  onChange={(e) =>
+                    setParams((p) => ({ ...p, [name]: e.target.value }))
+                  }
+                  placeholder={name}
+                />
               </div>
             ))}
           </div>
-        ))
-      )}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-lg lg:grid-cols-[320px_1fr]">
+        {/* ---------- Left: list ---------- */}
+      <div className="flex flex-col gap-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)]">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Tìm snippet…"
+        />
+        <Button type="button" onClick={() => setEdit({ mode: "new" })}>
+          + New snippet
+        </Button>
+        <div className="flex flex-col gap-md overflow-auto pr-xxs">
+          {grouped.length === 0 ? (
+            <p className="text-body-sm text-stone">Không khớp.</p>
+          ) : (
+            grouped.map(([cat, list]) => (
+              <div key={cat} className="flex flex-col gap-xxs">
+                <h3 className="text-micro-uppercase text-stone">
+                  {cat} · {list.length}
+                </h3>
+                {list.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => select(s)}
+                    className={`truncate rounded-md px-sm py-xs text-left text-body-sm transition-colors ${
+                      s.id === selectedId
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-slate hover:bg-surface"
+                    }`}
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ---------- Right: preview ---------- */}
+      <div className="lg:sticky lg:top-20 lg:h-fit">
+        {!selected ? (
+          <div className="rounded-lg border border-hairline bg-canvas p-xl text-body-sm text-stone">
+            Chọn một snippet ở danh sách bên trái.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-md rounded-lg border border-hairline bg-canvas p-lg">
+            <div className="flex flex-wrap items-start justify-between gap-sm">
+              <div className="flex flex-col gap-xxs">
+                <h2 className="text-heading-4 text-ink">{selected.title}</h2>
+                <span className="text-caption text-stone">
+                  {selected.category}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-xs">
+                <CopyButton text={generated} label="Copy SQL" />
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setEdit({ mode: "edit", snippet: selected })}
+                >
+                  Edit
+                </Button>
+                <DeleteSnippetButton
+                  id={selected.id}
+                  onDone={() => {
+                    setSelectedId(null);
+                    router.refresh();
+                  }}
+                />
+              </div>
+            </div>
+
+            {localParams.length > 0 ? (
+              <div className="flex flex-col gap-xs rounded-md bg-surface p-sm">
+                <p className="text-caption text-stone">
+                  Tham số riêng của snippet (bỏ trống thì giữ{" "}
+                  <code className="font-mono">{"${param}"}</code>).
+                </p>
+                <div className="grid grid-cols-1 gap-sm sm:grid-cols-2">
+                  {localParams.map((name) => (
+                    <div key={name} className="flex flex-col gap-xxs">
+                      <label
+                        htmlFor={`param-${name}`}
+                        className="font-mono text-caption text-slate"
+                      >
+                        {"${" + name + "}"}
+                      </label>
+                      <Input
+                        id={`param-${name}`}
+                        value={params[name] ?? ""}
+                        onChange={(e) =>
+                          setParams((p) => ({ ...p, [name]: e.target.value }))
+                        }
+                        placeholder={name}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <pre className="max-h-[60vh] overflow-auto whitespace-pre rounded-md bg-surface-code p-md font-mono text-code-sm text-on-dark">
+              {generated}
+            </pre>
+          </div>
+        )}
+        </div>
+      </div>
+
+      <Modal
+        open={edit !== null}
+        onClose={() => setEdit(null)}
+        title={edit?.mode === "edit" ? "Edit snippet" : "New snippet"}
+      >
+        {edit ? (
+          <SnippetForm
+            categories={categories}
+            initial={edit.mode === "edit" ? edit.snippet : undefined}
+            onDone={() => {
+              setEdit(null);
+              router.refresh();
+            }}
+            onCancel={() => setEdit(null)}
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
@@ -171,10 +302,7 @@ function SnippetForm({
   }
 
   return (
-    <div className="flex flex-col gap-md rounded-lg border border-primary bg-canvas p-lg">
-      <h3 className="text-heading-5 text-ink">
-        {initial ? "Edit snippet" : "New snippet"}
-      </h3>
+    <div className="flex flex-col gap-md">
       <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
         <FormField label="Category" htmlFor="snip-category">
           <Combobox
@@ -194,7 +322,11 @@ function SnippetForm({
           />
         </FormField>
       </div>
-      <FormField label="SQL" htmlFor="snip-body">
+      <FormField
+        label="SQL"
+        htmlFor="snip-body"
+        hint="Dùng ${param} cho chỗ cần điền (vd ${user_id})."
+      >
         <TextArea
           id="snip-body"
           mono
@@ -205,12 +337,12 @@ function SnippetForm({
         />
       </FormField>
       <ErrorMessage>{error}</ErrorMessage>
-      <div className="flex gap-xs">
-        <Button type="button" onClick={submit} disabled={pending}>
-          {pending ? "Saving…" : "Save snippet"}
-        </Button>
+      <div className="flex justify-end gap-xs">
         <Button variant="ghost" type="button" onClick={onCancel}>
           Cancel
+        </Button>
+        <Button type="button" onClick={submit} disabled={pending}>
+          {pending ? "Saving…" : "Save"}
         </Button>
       </div>
     </div>
