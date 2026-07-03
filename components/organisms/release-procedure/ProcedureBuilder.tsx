@@ -23,6 +23,7 @@ import { TextArea } from "@/components/atoms/TextArea";
 import { Label } from "@/components/atoms/Label";
 import { Select } from "@/components/atoms/Select";
 import { Combobox } from "@/components/atoms/Combobox";
+import { Modal } from "@/components/atoms/Modal";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
 import { KNOWN_REPOS } from "@/lib/release-procedure/constants";
 import { MarkdownPreview } from "@/components/organisms/release-procedure/MarkdownPreview";
@@ -73,6 +74,30 @@ export function ProcedureBuilder({ templates, initial }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const dragIndex = useRef<number | null>(null);
+  // SQL modal: which block index is being edited (null = closed) + the draft.
+  const [sqlFor, setSqlFor] = useState<number | null>(null);
+  const [sqlDraft, setSqlDraft] = useState("");
+
+  function insertSql() {
+    if (sqlFor === null) return;
+    const sql = sqlDraft.replace(/\s+$/, "").replace(/^\n+/, "");
+    if (!sql) {
+      setSqlFor(null);
+      return;
+    }
+    // Insert as a top-level fenced block (column 0) so nested-list indentation
+    // can never break the code fence — the format stays valid regardless.
+    const fenced = "```sql\n" + sql + "\n```";
+    setBlocks((prev) =>
+      prev.map((x, j) =>
+        j === sqlFor
+          ? { ...x, body: `${x.body.replace(/\s+$/, "")}\n\n${fenced}\n` }
+          : x,
+      ),
+    );
+    setSqlFor(null);
+    setSqlDraft("");
+  }
 
   const fullTitle = `${TITLE_PREFIX}${rest.trim()}`;
   const customVars = useMemo(() => detectVariables(blocks), [blocks]);
@@ -380,6 +405,18 @@ export function ProcedureBuilder({ templates, initial }: Props) {
                   )
                 }
               />
+              <div className="flex justify-end">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => {
+                    setSqlDraft("");
+                    setSqlFor(i);
+                  }}
+                >
+                  + Chèn SQL
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -445,6 +482,33 @@ export function ProcedureBuilder({ templates, initial }: Props) {
           )}
         </div>
       </div>
+
+      <Modal
+        open={sqlFor !== null}
+        onClose={() => setSqlFor(null)}
+        title="Nhập SQL"
+      >
+        <p className="text-caption text-stone">
+          Dán SQL vào đây — sẽ được chèn thành một khối code SQL đúng định dạng,
+          tránh lỗi xuống dòng khi dán thẳng vào block.
+        </p>
+        <TextArea
+          mono
+          rows={14}
+          value={sqlDraft}
+          onChange={(e) => setSqlDraft(e.target.value)}
+          placeholder={"BEGIN;\n\n-- SQL của bạn ở đây\n\nCOMMIT;"}
+          autoFocus
+        />
+        <div className="flex justify-end gap-xs">
+          <Button variant="ghost" type="button" onClick={() => setSqlFor(null)}>
+            Hủy
+          </Button>
+          <Button type="button" onClick={insertSql}>
+            Chèn vào block
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

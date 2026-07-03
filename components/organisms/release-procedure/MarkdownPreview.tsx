@@ -8,7 +8,18 @@ import remarkGfm from "remark-gfm";
 export function MarkdownPreview({ markdown }: { markdown: string }) {
   return (
     <div className="markdown-preview">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Mọi link mở sang tab mới.
+          a({ node, ...props }) {
+            void node;
+            return <a {...props} target="_blank" rel="noopener noreferrer" />;
+          },
+        }}
+      >
+        {markdown}
+      </ReactMarkdown>
     </div>
   );
 }
