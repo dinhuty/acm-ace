@@ -36,6 +36,8 @@ export async function createProcedure(input: ProcedureInput): Promise<void> {
   redirect(`/release-procedure/${rows[0].id}`);
 }
 
+// No redirect: edit now happens inside a modal, so the caller closes the modal
+// and refreshes in place instead of navigating.
 export async function updateProcedure(
   id: number,
   input: ProcedureInput,
@@ -54,7 +56,6 @@ export async function updateProcedure(
 
   revalidatePath("/release-procedure");
   revalidatePath(`/release-procedure/${id}`);
-  redirect(`/release-procedure/${id}`);
 }
 
 export async function deleteProcedure(id: number): Promise<void> {

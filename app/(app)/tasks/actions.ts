@@ -3,15 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { tasks } from "@/db/schema";
+import { tasks, type TaskPr } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
 
 export type TaskInput = {
   title: string;
+  description: string;
   slackTaskUrl: string;
   slackReviewUrl: string;
   procedureId: number | null;
   docUrl: string;
+  prs: TaskPr[];
   note: string;
 };
 
@@ -20,10 +22,18 @@ export type TaskResult = { ok: true } | { ok: false; error: string };
 function normalize(i: TaskInput): TaskInput {
   return {
     title: i.title.trim(),
+    description: i.description,
     slackTaskUrl: i.slackTaskUrl.trim(),
     slackReviewUrl: i.slackReviewUrl.trim(),
     procedureId: i.procedureId,
     docUrl: i.docUrl.trim(),
+    prs: i.prs
+      .map((p) => ({
+        repo: p.repo.trim(),
+        branch: p.branch.trim(),
+        pr: p.pr.trim(),
+      }))
+      .filter((p) => p.repo || p.branch || p.pr),
     note: i.note,
   };
 }

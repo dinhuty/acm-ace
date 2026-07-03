@@ -12,10 +12,12 @@ export default async function TasksPage() {
     .select({
       id: tasks.id,
       title: tasks.title,
+      description: tasks.description,
       slackTaskUrl: tasks.slackTaskUrl,
       slackReviewUrl: tasks.slackReviewUrl,
       procedureId: tasks.procedureId,
       docUrl: tasks.docUrl,
+      prs: tasks.prs,
       note: tasks.note,
     })
     .from(tasks)

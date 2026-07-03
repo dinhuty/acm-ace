@@ -8,10 +8,12 @@ type Props = {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  // "wide" fits large editors (e.g. the two-column procedure builder).
+  size?: "default" | "wide";
 };
 
 // Lightweight modal: backdrop + centered panel, closes on Escape / backdrop.
-export function Modal({ open, onClose, title, children }: Props) {
+export function Modal({ open, onClose, title, children, size = "default" }: Props) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -30,7 +32,11 @@ export function Modal({ open, onClose, title, children }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-md">
       <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
-      <div className="relative z-10 flex max-h-[85vh] w-full max-w-[46rem] flex-col gap-md overflow-auto rounded-xl border border-hairline bg-canvas p-lg shadow-lg">
+      <div
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col gap-md overflow-auto rounded-xl border border-hairline bg-canvas p-lg shadow-lg ${
+          size === "wide" ? "max-w-[80rem]" : "max-w-[46rem]"
+        }`}
+      >
         <h2 className="text-heading-5 text-ink">{title}</h2>
         {children}
       </div>

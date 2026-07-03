@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -116,6 +117,9 @@ export const sqlSnippets = pgTable(
   (t) => [unique("sql_snippets_category_title_unique").on(t.category, t.title)],
 );
 
+// A PR/branch belonging to a task (a task usually spans several repos).
+export type TaskPr = { repo: string; branch: string; pr: string };
+
 // Personal task tracker — each row is private to its owner (`user_id`); the
 // tool always queries scoped to the current user.
 export const tasks = pgTable("tasks", {
@@ -124,12 +128,17 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  description: text("description").notNull().default(""),
   slackTaskUrl: text("slack_task_url").notNull().default(""),
   slackReviewUrl: text("slack_review_url").notNull().default(""),
   procedureId: integer("procedure_id").references(() => releaseProcedures.id, {
     onDelete: "set null",
   }),
   docUrl: text("doc_url").notNull().default(""),
+  prs: jsonb("prs")
+    .notNull()
+    .$type<TaskPr[]>()
+    .default(sql`'[]'::jsonb`),
   note: text("note").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

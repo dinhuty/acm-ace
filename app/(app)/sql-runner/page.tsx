@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sqlSnippets } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
@@ -16,7 +16,7 @@ export default async function SqlRunnerPage() {
       body: sqlSnippets.body,
     })
     .from(sqlSnippets)
-    .orderBy(asc(sqlSnippets.category), asc(sqlSnippets.title));
+    .orderBy(desc(sqlSnippets.updatedAt), desc(sqlSnippets.id));
 
   return (
     <div className="flex flex-col gap-lg">

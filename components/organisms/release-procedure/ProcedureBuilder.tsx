@@ -47,6 +47,11 @@ type Props = {
     blocks: ProcedureBlock[];
     variables: { branches: ReleaseBranch[]; vars: Record<string, string> };
   };
+  // When rendered inside the edit modal: called after a successful update so
+  // the caller can close the modal + refresh (updateProcedure no longer
+  // redirects). onCancel replaces the Cancel link with an in-place close.
+  onSaved?: () => void;
+  onCancel?: () => void;
 };
 
 const TITLE_PREFIX = "AIRCLOSET-";
@@ -55,7 +60,12 @@ function bodyFor(t: TemplateLite, lang: ProcedureLanguage): string {
   return lang === "ja" ? t.bodyJa : lang === "en" ? t.bodyEn : t.bodyVi;
 }
 
-export function ProcedureBuilder({ templates, initial }: Props) {
+export function ProcedureBuilder({
+  templates,
+  initial,
+  onSaved,
+  onCancel,
+}: Props) {
   const [rest, setRest] = useState(
     initial ? initial.title.replace(new RegExp(`^${TITLE_PREFIX}`), "") : "",
   );
@@ -188,8 +198,12 @@ export function ProcedureBuilder({ templates, initial }: Props) {
       },
     };
     startTransition(async () => {
-      if (initial) await updateProcedure(initial.id, payload);
-      else await createProcedure(payload);
+      if (initial) {
+        await updateProcedure(initial.id, payload);
+        onSaved?.();
+      } else {
+        await createProcedure(payload);
+      }
     });
   }
 
@@ -499,11 +513,23 @@ export function ProcedureBuilder({ templates, initial }: Props) {
             </Button>
           </div>
           <div className="flex gap-xs">
-            <Link href={initial ? `/release-procedure/${initial.id}` : "/release-procedure"}>
-              <Button variant="ghost" type="button">
+            {onCancel ? (
+              <Button variant="ghost" type="button" onClick={onCancel}>
                 Cancel
               </Button>
-            </Link>
+            ) : (
+              <Link
+                href={
+                  initial
+                    ? `/release-procedure/${initial.id}`
+                    : "/release-procedure"
+                }
+              >
+                <Button variant="ghost" type="button">
+                  Cancel
+                </Button>
+              </Link>
+            )}
             <Button type="button" onClick={save} disabled={pending}>
               {pending ? "Saving…" : "Save"}
             </Button>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { releaseTemplates } from "@/db/schema";
 import { TemplateManager } from "@/components/organisms/release-procedure/TemplateManager";
@@ -18,7 +18,7 @@ export default async function TemplatesPage() {
       bodyVi: releaseTemplates.bodyVi,
     })
     .from(releaseTemplates)
-    .orderBy(asc(releaseTemplates.category), asc(releaseTemplates.name));
+    .orderBy(desc(releaseTemplates.updatedAt), desc(releaseTemplates.id));
 
   return (
     <div className="flex flex-col gap-lg">

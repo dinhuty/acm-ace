@@ -13,9 +13,11 @@ import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { TextArea } from "@/components/atoms/TextArea";
 import { Combobox } from "@/components/atoms/Combobox";
+import { Pagination } from "@/components/atoms/Pagination";
 import { FormField } from "@/components/molecules/FormField";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
 import { KNOWN_REPOS, KNOWN_CATEGORIES } from "@/lib/release-procedure/constants";
+import { usePaged } from "@/lib/use-paged";
 
 type EditState = { mode: "new" } | { mode: "edit"; template: TemplateLite } | null;
 
@@ -30,21 +32,22 @@ const EMPTY: TemplateInput = {
 
 export function TemplateManager({ templates }: { templates: TemplateLite[] }) {
   const [edit, setEdit] = useState<EditState>(null);
+  const [query, setQuery] = useState("");
   const router = useRouter();
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, TemplateLite[]>();
-    for (const t of templates) {
-      const key = t.category || "Uncategorized";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(t);
-    }
-    return [...map.entries()];
-  }, [templates]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter((t) =>
+      `${t.name} ${t.category} ${t.repo}`.toLowerCase().includes(q),
+    );
+  }, [templates, query]);
+
+  const { page, setPage, totalPages, total, pageItems } = usePaged(filtered, 10);
 
   return (
-    <div className="flex flex-col gap-lg">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-md">
+      <div className="flex flex-wrap items-center justify-between gap-sm">
         <h2 className="text-heading-4 text-ink">Templates (master data)</h2>
         {edit ? null : (
           <Button type="button" onClick={() => setEdit({ mode: "new" })}>
@@ -65,47 +68,66 @@ export function TemplateManager({ templates }: { templates: TemplateLite[] }) {
         />
       ) : null}
 
-      {templates.length === 0 && !edit ? (
-        <p className="text-body-sm text-stone">
-          No templates yet. Create one to build procedures from.
-        </p>
-      ) : null}
+      <Input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Tìm template…"
+        className="max-w-[24rem]"
+      />
 
-      <div className="flex flex-col gap-md">
-        {grouped.map(([cat, list]) => (
-          <div key={cat} className="flex flex-col gap-xs">
-            <h3 className="text-micro-uppercase text-stone">{cat}</h3>
-            {list.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md"
-              >
-                <div className="flex items-center gap-xs">
-                  <span className="text-body-md-medium text-ink">{t.name}</span>
-                  {t.repo ? (
-                    <span className="rounded-full bg-surface px-xs py-xxs text-micro text-steel">
-                      {t.repo}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex gap-xs">
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    onClick={() => setEdit({ mode: "edit", template: t })}
-                  >
-                    Edit
-                  </Button>
-                  <DeleteTemplateButton
-                    id={t.id}
-                    onDone={() => router.refresh()}
-                  />
-                </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        onPage={setPage}
+      />
+
+      {total === 0 ? (
+        <p className="text-body-sm text-stone">
+          {templates.length === 0
+            ? "No templates yet. Create one to build procedures from."
+            : "Không có template khớp."}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-xs">
+          {pageItems.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md"
+            >
+              <div className="flex flex-wrap items-center gap-xs">
+                <span className="text-body-md-medium text-ink">{t.name}</span>
+                {t.category ? (
+                  <span className="rounded-full bg-primary/10 px-xs py-xxs text-micro text-primary">
+                    {t.category}
+                  </span>
+                ) : null}
+                {t.repo ? (
+                  <span className="rounded-full bg-surface px-xs py-xxs text-micro text-steel">
+                    {t.repo}
+                  </span>
+                ) : null}
               </div>
-            ))}
-          </div>
-        ))}
-      </div>
+              <div className="flex shrink-0 gap-xs">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setEdit({ mode: "edit", template: t })}
+                >
+                  Edit
+                </Button>
+                <DeleteTemplateButton
+                  id={t.id}
+                  onDone={() => router.refresh()}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -78,6 +78,26 @@ export function TaskIcon({ className, ...props }: IconProps) {
   );
 }
 
+/** Backlog — chữ "b" trắng trên nền xanh (ticket Backlog). */
+export function BacklogIcon({ className, ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} {...props}>
+      <rect width="24" height="24" rx="6" fill="#22a06b" />
+      <text
+        x="12"
+        y="17.5"
+        textAnchor="middle"
+        fontFamily="Inter, system-ui, sans-serif"
+        fontSize="15"
+        fontWeight="700"
+        fill="#ffffff"
+      >
+        b
+      </text>
+    </svg>
+  );
+}
+
 /** Env Diff — hai mũi tên lên/xuống so sánh. */
 export function DiffIcon({ className, ...props }: IconProps) {
   return (

@@ -13,9 +13,11 @@ import { Input } from "@/components/atoms/Input";
 import { TextArea } from "@/components/atoms/TextArea";
 import { Combobox } from "@/components/atoms/Combobox";
 import { Modal } from "@/components/atoms/Modal";
+import { Pagination } from "@/components/atoms/Pagination";
 import { FormField } from "@/components/molecules/FormField";
 import { ErrorMessage } from "@/components/atoms/ErrorMessage";
 import { CopyButton } from "@/components/atoms/CopyButton";
+import { usePaged } from "@/lib/use-paged";
 
 export type Snippet = {
   id: number;
@@ -77,21 +79,16 @@ export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
     [snippets],
   );
 
-  const grouped = useMemo(() => {
+  // Flat, newest-first (server order), filtered by search, then paginated.
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const matched = q
-      ? snippets.filter((s) =>
-          `${s.title} ${s.category} ${s.body}`.toLowerCase().includes(q),
-        )
-      : snippets;
-    const map = new Map<string, Snippet[]>();
-    for (const s of matched) {
-      const key = s.category || "Uncategorized";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(s);
-    }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    if (!q) return snippets;
+    return snippets.filter((s) =>
+      `${s.title} ${s.category} ${s.body}`.toLowerCase().includes(q),
+    );
   }, [snippets, query]);
+
+  const { page, setPage, totalPages, total, pageItems } = usePaged(filtered, 20);
 
   // Params shared by >= 2 snippets are treated as global "context" (e.g.
   // user_id) — set once, applied to every snippet's ${...}.
@@ -103,7 +100,7 @@ export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
       }
     }
     return [...count.entries()]
-      .filter(([, n]) => n >= 3)
+      .filter(([p, n]) => n >= 3 && !/_\d+$/.test(p))
       .map(([p]) => p)
       .sort();
   }, [snippets]);
@@ -139,24 +136,26 @@ export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
             </span>
           </button>
           {ctxOpen ? (
-            <div className="grid grid-cols-2 gap-x-md gap-y-xs sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-sm sm:grid-cols-3 lg:grid-cols-4">
               {contextParams.map((name) => (
-                <label key={name} className="flex items-center gap-xs">
-                  <span
-                    className="w-16 shrink-0 truncate font-mono text-micro text-stone"
+                <div key={name} className="flex flex-col gap-xxs">
+                  <label
+                    htmlFor={`ctx-${name}`}
+                    className="truncate font-mono text-micro text-stone"
                     title={name}
                   >
                     {name}
-                  </span>
+                  </label>
                   <input
+                    id={`ctx-${name}`}
                     value={params[name] ?? ""}
                     onChange={(e) =>
                       setParams((p) => ({ ...p, [name]: e.target.value }))
                     }
                     placeholder="…"
-                    className="h-9 min-w-0 flex-1 rounded-md border border-hairline bg-canvas px-xs text-body-sm text-ink outline-none transition-colors hover:border-stone focus:border-primary"
+                    className="h-9 w-full rounded-md border border-hairline bg-canvas px-sm text-body-sm text-ink outline-none transition-colors hover:border-stone focus:border-primary"
                   />
-                </label>
+                </div>
               ))}
             </div>
           ) : null}
@@ -168,36 +167,50 @@ export function SnippetLibrary({ snippets }: { snippets: Snippet[] }) {
       <div className="flex flex-col gap-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)]">
         <Input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
           placeholder="Tìm snippet…"
+          className="shrink-0"
         />
-        <Button type="button" onClick={() => setEdit({ mode: "new" })}>
+        <Button
+          type="button"
+          onClick={() => setEdit({ mode: "new" })}
+          className="shrink-0"
+        >
           + New snippet
         </Button>
-        <div className="flex flex-col gap-sm overflow-auto pr-xxs">
-          {grouped.length === 0 ? (
+        <div className="shrink-0">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPage={setPage}
+          />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto pr-xxs">
+          {total === 0 ? (
             <p className="text-body-sm text-stone">Không khớp.</p>
           ) : (
-            grouped.map(([cat, list]) => (
-              <div key={cat} className="flex flex-col">
-                <h3 className="px-sm pb-xxs pt-xs text-micro-uppercase text-stone">
-                  {cat} · {list.length}
-                </h3>
-                {list.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => select(s)}
-                    className={`truncate rounded-md px-sm py-xxs text-left text-body-sm transition-colors ${
-                      s.id === selectedId
-                        ? "bg-primary/10 font-medium text-primary"
-                        : "text-slate hover:bg-surface"
-                    }`}
-                  >
-                    {s.title}
-                  </button>
-                ))}
-              </div>
+            pageItems.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => select(s)}
+                className={`flex items-center justify-between gap-sm rounded-md px-sm py-xxs text-left text-body-sm transition-colors ${
+                  s.id === selectedId
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-slate hover:bg-surface"
+                }`}
+              >
+                <span className="truncate">{s.title}</span>
+                {s.category ? (
+                  <span className="shrink-0 rounded-full bg-surface px-xs text-micro text-stone">
+                    {s.category}
+                  </span>
+                ) : null}
+              </button>
             ))
           )}
         </div>

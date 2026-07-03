@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { releaseProcedures } from "@/db/schema";
-import { LANGUAGES } from "@/lib/release-procedure/markdown";
+import { releaseProcedures, releaseTemplates } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
 import { Button } from "@/components/atoms/Button";
+import { ProcedureList } from "@/components/organisms/release-procedure/ProcedureList";
 
 export default async function ReleaseProcedureHome() {
   await requireUser();
@@ -14,9 +14,24 @@ export default async function ReleaseProcedureHome() {
       title: releaseProcedures.title,
       language: releaseProcedures.language,
       updatedAt: releaseProcedures.updatedAt,
+      blocks: releaseProcedures.blocks,
+      variables: releaseProcedures.variables,
     })
     .from(releaseProcedures)
     .orderBy(desc(releaseProcedures.updatedAt));
+
+  const templates = await db
+    .select({
+      id: releaseTemplates.id,
+      category: releaseTemplates.category,
+      name: releaseTemplates.name,
+      repo: releaseTemplates.repo,
+      bodyJa: releaseTemplates.bodyJa,
+      bodyEn: releaseTemplates.bodyEn,
+      bodyVi: releaseTemplates.bodyVi,
+    })
+    .from(releaseTemplates)
+    .orderBy(asc(releaseTemplates.category), asc(releaseTemplates.name));
 
   return (
     <div className="flex flex-col gap-lg">
@@ -39,30 +54,7 @@ export default async function ReleaseProcedureHome() {
         </div>
       </div>
 
-      {procedures.length === 0 ? (
-        <p className="text-body-sm text-stone">
-          No saved procedures yet. Create one from your templates.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-xs">
-          {procedures.map((p) => (
-            <Link
-              key={p.id}
-              href={`/release-procedure/${p.id}`}
-              className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md transition-colors hover:border-primary"
-            >
-              <span className="text-body-md-medium text-ink">{p.title}</span>
-              <span className="flex items-center gap-sm text-caption text-stone">
-                <span>
-                  {LANGUAGES.find((l) => l.value === p.language)?.label ??
-                    p.language}
-                </span>
-                <span>{p.updatedAt.toLocaleDateString()}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <ProcedureList procedures={procedures} templates={templates} />
     </div>
   );
 }

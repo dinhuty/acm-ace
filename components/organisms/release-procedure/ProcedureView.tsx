@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import type {
   ProcedureBlock,
   ProcedureLanguage,
@@ -12,6 +11,8 @@ import { LANGUAGES, procedureToMarkdown } from "@/lib/release-procedure/markdown
 import { Button } from "@/components/atoms/Button";
 import { CopyButton } from "@/components/atoms/CopyButton";
 import { MarkdownPreview } from "@/components/organisms/release-procedure/MarkdownPreview";
+import { ProcedureEditModal } from "@/components/organisms/release-procedure/ProcedureEditModal";
+import type { TemplateLite } from "@/components/organisms/release-procedure/ProcedureBuilder";
 
 type Props = {
   id: number;
@@ -19,9 +20,17 @@ type Props = {
   language: ProcedureLanguage;
   blocks: ProcedureBlock[];
   variables: ProcedureVariables;
+  templates: TemplateLite[];
 };
 
-export function ProcedureView({ id, title, language, blocks, variables }: Props) {
+export function ProcedureView({
+  id,
+  title,
+  language,
+  blocks,
+  variables,
+  templates,
+}: Props) {
   const [showRaw, setShowRaw] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -62,11 +71,10 @@ export function ProcedureView({ id, title, language, blocks, variables }: Props)
             Raw
           </Button>
           <CopyButton text={markdown} />
-          <Link href={`/release-procedure/${id}/edit`}>
-            <Button variant="secondary" type="button">
-              Edit
-            </Button>
-          </Link>
+          <ProcedureEditModal
+            templates={templates}
+            procedure={{ id, title, language, blocks, variables }}
+          />
           <Button
             variant="danger"
             type="button"
