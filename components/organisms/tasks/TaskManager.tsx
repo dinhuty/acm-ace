@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -74,6 +74,78 @@ function LinkChip({ href, label }: { href: string; label: string }) {
   );
 }
 
+// Full task content — shared by the grid card and the detail modal.
+function TaskBody({
+  task: t,
+  procTitle,
+}: {
+  task: Task;
+  procTitle: Map<number, string>;
+}) {
+  return (
+    <>
+      {t.tags.length > 0 ? (
+        <div className="flex flex-wrap gap-xs">
+          {t.tags.map((tag) => (
+            <TagChip key={tag} tag={tag} />
+          ))}
+        </div>
+      ) : null}
+
+      {t.description.trim() ? (
+        <p className="whitespace-pre-wrap text-body-sm text-slate">
+          {t.description}
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-xs">
+        <LinkChip href={t.slackTaskUrl} label="Slack task" />
+        <LinkChip href={t.slackReviewUrl} label="Slack review" />
+        <LinkChip href={t.docUrl} label="Document" />
+      </div>
+
+      {t.procedureId ? (
+        <Link
+          href={`/release-procedure/${t.procedureId}`}
+          className="text-body-sm text-primary underline"
+        >
+          {procTitle.get(t.procedureId) ?? "Release procedure"}
+        </Link>
+      ) : null}
+
+      {t.prs.length > 0 ? (
+        <div className="flex flex-col gap-xxs">
+          {t.prs.map((p, i) => (
+            <div key={i} className="text-body-sm text-slate">
+              <span className="font-mono">{p.repo || "?"}</span>
+              {p.branch ? <span className="text-stone"> · {p.branch}</span> : null}
+              {p.pr ? (
+                <>
+                  {" — "}
+                  <a
+                    href={prUrl(p.repo, p.pr)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-tag underline"
+                  >
+                    #{p.pr} ↗
+                  </a>
+                </>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {t.note.trim() ? (
+        <p className="whitespace-pre-wrap rounded-md bg-surface p-sm text-body-sm text-slate">
+          {t.note}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function TaskManager({
   tasks,
   procedures,
@@ -85,7 +157,19 @@ export function TaskManager({
     { mode: "new" } | { mode: "edit"; task: Task } | null
   >(null);
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [detail, setDetail] = useState<Task | null>(null);
   const router = useRouter();
+
+  // Remember the chosen view across reloads.
+  useEffect(() => {
+    const v = localStorage.getItem("tasks:view");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (v === "grid" || v === "list") setView(v);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("tasks:view", view);
+  }, [view]);
 
   const procTitle = useMemo(() => {
     const m = new Map<number, string>();
@@ -127,9 +211,27 @@ export function TaskManager({
           placeholder="Tìm task…"
           className="max-w-[24rem]"
         />
-        <Button type="button" onClick={() => setEdit({ mode: "new" })}>
-          + New task
-        </Button>
+        <div className="flex items-center gap-sm">
+          <div className="flex overflow-hidden rounded-md border border-hairline">
+            {(["list", "grid"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={`px-sm py-xxs text-body-sm capitalize transition-colors ${
+                  view === v
+                    ? "bg-primary text-on-primary"
+                    : "bg-canvas text-steel hover:bg-surface"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <Button type="button" onClick={() => setEdit({ mode: "new" })}>
+            + New task
+          </Button>
+        </div>
       </div>
 
       <Pagination
@@ -143,6 +245,30 @@ export function TaskManager({
         <p className="text-body-sm text-stone">
           {tasks.length === 0 ? "Chưa có task nào." : "Không có task khớp."}
         </p>
+      ) : view === "list" ? (
+        <div className="flex flex-col gap-xs">
+          {pageItems.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setDetail(t)}
+              className="flex w-full items-center gap-sm rounded-lg border border-hairline border-l-4 border-l-[#7c3aed] bg-canvas p-md text-left transition-colors hover:border-primary"
+            >
+              <BacklogIcon className="h-5 w-5 shrink-0" />
+              <div className="flex min-w-0 flex-1 flex-col gap-xxs">
+                <span className="text-body-md-medium text-ink">{t.title}</span>
+                {t.description.trim() ? (
+                  <span className="truncate text-body-sm text-stone">
+                    {t.description}
+                  </span>
+                ) : null}
+              </div>
+              {t.tags.includes(RELEASE_TAG) ? (
+                <TagChip tag={RELEASE_TAG} />
+              ) : null}
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-md lg:grid-cols-2">
           {pageItems.map((t) => (
@@ -151,10 +277,16 @@ export function TaskManager({
               className="flex flex-col gap-sm rounded-lg border border-hairline border-l-4 border-l-[#7c3aed] bg-canvas p-lg"
             >
               <div className="flex items-start justify-between gap-sm">
-                <div className="flex items-center gap-xs">
+                <button
+                  type="button"
+                  onClick={() => setDetail(t)}
+                  className="flex items-center gap-xs text-left"
+                >
                   <BacklogIcon className="h-5 w-5 shrink-0" />
-                  <h3 className="text-heading-5 text-ink">{t.title}</h3>
-                </div>
+                  <h3 className="text-heading-5 text-ink hover:text-primary">
+                    {t.title}
+                  </h3>
+                </button>
                 <div className="flex shrink-0 gap-xs">
                   <Button
                     variant="secondary"
@@ -167,70 +299,43 @@ export function TaskManager({
                 </div>
               </div>
 
-              {t.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-xs">
-                  {t.tags.map((tag) => (
-                    <TagChip key={tag} tag={tag} />
-                  ))}
-                </div>
-              ) : null}
-
-              {t.description.trim() ? (
-                <p className="whitespace-pre-wrap text-body-sm text-slate">
-                  {t.description}
-                </p>
-              ) : null}
-
-              <div className="flex flex-wrap gap-xs">
-                <LinkChip href={t.slackTaskUrl} label="Slack task" />
-                <LinkChip href={t.slackReviewUrl} label="Slack review" />
-                <LinkChip href={t.docUrl} label="Document" />
-              </div>
-
-              {t.procedureId ? (
-                <Link
-                  href={`/release-procedure/${t.procedureId}`}
-                  className="text-body-sm text-primary underline"
-                >
-                  {procTitle.get(t.procedureId) ?? "Release procedure"}
-                </Link>
-              ) : null}
-
-              {t.prs.length > 0 ? (
-                <div className="flex flex-col gap-xxs">
-                  {t.prs.map((p, i) => (
-                    <div key={i} className="text-body-sm text-slate">
-                      <span className="font-mono">{p.repo || "?"}</span>
-                      {p.branch ? (
-                        <span className="text-stone"> · {p.branch}</span>
-                      ) : null}
-                      {p.pr ? (
-                        <>
-                          {" — "}
-                          <a
-                            href={prUrl(p.repo, p.pr)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-brand-tag underline"
-                          >
-                            #{p.pr} ↗
-                          </a>
-                        </>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {t.note.trim() ? (
-                <p className="whitespace-pre-wrap rounded-md bg-surface p-sm text-body-sm text-slate">
-                  {t.note}
-                </p>
-              ) : null}
+              <TaskBody task={t} procTitle={procTitle} />
             </div>
           ))}
         </div>
       )}
+
+      <Modal
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={detail?.title ?? ""}
+      >
+        {detail ? (
+          <div className="flex flex-col gap-md">
+            <TaskBody task={detail} procTitle={procTitle} />
+            <div className="flex justify-end gap-xs border-t border-hairline pt-sm">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  const t = detail;
+                  setDetail(null);
+                  setEdit({ mode: "edit", task: t });
+                }}
+              >
+                Edit
+              </Button>
+              <DeleteTaskButton
+                id={detail.id}
+                onDone={() => {
+                  setDetail(null);
+                  router.refresh();
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={edit !== null}
