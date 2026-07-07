@@ -5,6 +5,7 @@ import {
   SqlIcon,
   DiffIcon,
   TaskIcon,
+  MdIcon,
 } from "@/components/atoms/icons";
 
 type Tool = {
@@ -49,6 +50,14 @@ const TOOLS: Tool[] = [
     icon: DiffIcon,
     accent: "#c2410c",
     href: "/env-diff",
+  },
+  {
+    name: "Markdown Docs",
+    description:
+      "Lưu trữ tài liệu markdown dùng chung — render, raw, copy, gắn tag. Mọi user thêm / sửa / xoá được.",
+    icon: MdIcon,
+    accent: "#0891b2",
+    href: "/md-docs",
   },
 ];
 

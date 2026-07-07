@@ -168,8 +168,27 @@ export const tasks = pgTable("tasks", {
     .notNull(),
 });
 
+// Shared master data: a library of markdown documents (notes, docs, cheat
+// sheets). Everyone can add / edit / delete; flat list with tags.
+export const mdDocs = pgTable("md_docs", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  tags: jsonb("tags").notNull().$type<string[]>().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedBy: integer("updated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
 export type User = typeof users.$inferSelect;
 export type ReleaseTemplate = typeof releaseTemplates.$inferSelect;
 export type ReleaseProcedure = typeof releaseProcedures.$inferSelect;
 export type SqlSnippet = typeof sqlSnippets.$inferSelect;
+export type MdDoc = typeof mdDocs.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

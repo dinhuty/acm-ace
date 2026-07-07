@@ -124,6 +124,17 @@ export function GridIcon({ className, ...props }: IconProps) {
   );
 }
 
+/** Markdown Docs — dấu markdown (M + mũi tên xuống trong khung). */
+export function MdIcon({ className, ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} {...base} {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M6.5 15V9l2.5 2.5L11.5 9v6" />
+      <path d="M15.5 9v4.5M15.5 13.5 14 12M15.5 13.5 17 12" />
+    </svg>
+  );
+}
+
 /** Chế độ sáng — mặt trời. */
 export function SunIcon({ className, ...props }: IconProps) {
   return (

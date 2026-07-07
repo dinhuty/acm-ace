@@ -11,6 +11,7 @@ const TOOLS: Item[] = [
   { label: "SQL Runner", sub: "Tool", href: "/sql-runner" },
   { label: "Task Manager", sub: "Tool", href: "/tasks" },
   { label: "Env Diff", sub: "Tool", href: "/env-diff" },
+  { label: "Markdown Docs", sub: "Tool", href: "/md-docs" },
   { label: "Templates", sub: "Tool", href: "/release-procedure/templates" },
 ];
 
@@ -20,10 +21,12 @@ export function CommandPalette({
   procedures,
   tasks,
   snippets,
+  docs,
 }: {
   procedures: Lite[];
   tasks: Lite[];
   snippets: Lite[];
+  docs: Lite[];
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -80,8 +83,13 @@ export function CommandPalette({
         sub: s.category ? `Snippet · ${s.category}` : "Snippet",
         href: `/sql-runner?snippet=${s.id}`,
       })),
+      ...docs.map((d) => ({
+        label: d.title,
+        sub: "Doc",
+        href: `/md-docs?doc=${d.id}`,
+      })),
     ],
-    [procedures, tasks, snippets],
+    [procedures, tasks, snippets, docs],
   );
 
   const results = useMemo(() => {

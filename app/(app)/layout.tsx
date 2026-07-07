@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { releaseProcedures, tasks, sqlSnippets } from "@/db/schema";
+import { releaseProcedures, tasks, sqlSnippets, mdDocs } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
 import { AppHeader } from "@/components/organisms/AppHeader";
 import { CommandPalette } from "@/components/organisms/CommandPalette";
@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
 
   // Lightweight lists for the global Cmd+K palette.
-  const [procedures, myTasks, snippets] = await Promise.all([
+  const [procedures, myTasks, snippets, docs] = await Promise.all([
     db
       .select({ id: releaseProcedures.id, title: releaseProcedures.title })
       .from(releaseProcedures)
@@ -31,6 +31,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       .from(sqlSnippets)
       .orderBy(desc(sqlSnippets.createdAt))
       .limit(100),
+    db
+      .select({ id: mdDocs.id, title: mdDocs.title })
+      .from(mdDocs)
+      .orderBy(desc(mdDocs.createdAt))
+      .limit(100),
   ]);
 
   return (
@@ -41,6 +46,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         procedures={procedures}
         tasks={myTasks}
         snippets={snippets}
+        docs={docs}
       />
     </div>
   );
