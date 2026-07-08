@@ -135,13 +135,13 @@ export function MdDocList({
             onClick={() => setManageOpen(true)}
             title="Quản lý tag"
             aria-label="Quản lý tag"
-            className="w-11 px-0"
+            className="h-12 w-12 px-0"
           >
-            <TagIcon className="h-[18px] w-[18px]" />
+            <TagIcon className="h-5 w-5" />
           </Button>
           <Link href="/md-docs/new">
-            <Button type="button" className="gap-xs whitespace-nowrap" title="Tạo doc mới">
-              <PlusIcon className="h-[18px] w-[18px]" />
+            <Button type="button" className="h-12 gap-xs whitespace-nowrap" title="Tạo doc mới">
+              <PlusIcon className="h-5 w-5" />
               New
             </Button>
           </Link>
