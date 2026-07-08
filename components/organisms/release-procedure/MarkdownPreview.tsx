@@ -42,7 +42,20 @@ function codeLang(pre: HastNode | undefined): string {
 function Mermaid({ chart }: { chart: string }) {
   const [svg, setSvg] = useState("");
   const [failed, setFailed] = useState(false);
+  const [dark, setDark] = useState(false);
   const id = "m" + useId().replace(/[^a-zA-Z0-9]/g, "");
+
+  // Follow the app's light/dark mode: mermaid bakes colours into the SVG at
+  // render time, so we must re-render when the `.dark` class on <html> flips.
+  useEffect(() => {
+    const el = document.documentElement;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDark(el.classList.contains("dark"));
+    const obs = new MutationObserver(() => setDark(el.classList.contains("dark")));
+    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   useEffect(() => {
     let alive = true;
     import("mermaid")
@@ -50,9 +63,7 @@ function Mermaid({ chart }: { chart: string }) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
-          theme: document.documentElement.classList.contains("dark")
-            ? "dark"
-            : "default",
+          theme: dark ? "dark" : "default",
         });
         const { svg } = await mermaid.render(id, chart);
         if (alive) setSvg(svg);
@@ -63,7 +74,7 @@ function Mermaid({ chart }: { chart: string }) {
     return () => {
       alive = false;
     };
-  }, [chart, id]);
+  }, [chart, id, dark]);
   if (failed) return <pre>{chart}</pre>;
   return (
     <div
