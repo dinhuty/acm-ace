@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeSync } from "@/components/organisms/ThemeSync";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,11 +23,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // NB: the font/`antialiased` classes go on <body>, NOT <html>. The no-flash
-  // script and ThemeToggle add `.dark` to <html> imperatively; if React also
-  // owned <html>'s className it would re-commit the static value on every
-  // client navigation and strip `.dark` (dark → flash → light). With no
-  // className prop on <html>, React never touches its class, so `.dark` sticks.
+  // Theme (`.dark` on <html>) is managed imperatively, not via React props:
+  //  - the no-flash <head> script applies it before first paint;
+  //  - <ThemeSync> re-asserts it on every route change (before paint);
+  //  - font/`antialiased` classes live on <body> so React never owns <html>'s
+  //    className and can't clobber the theme class.
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -38,6 +39,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
+        <ThemeSync />
         {children}
       </body>
     </html>
