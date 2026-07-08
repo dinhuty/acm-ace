@@ -73,6 +73,21 @@ function enterListAt(b: string, s: number): Edit | null {
   return { next: b.slice(0, s) + ins + b.slice(s), start: s + ins.length, end: s + ins.length };
 }
 
+const TEMPLATES: { name: string; body: string }[] = [
+  {
+    name: "Runbook",
+    body: "# Runbook: <tên>\n\n> [!NOTE]\n> Mục tiêu của runbook này.\n\n## Bối cảnh\n\n## Các bước\n\n1. \n\n## Rollback\n\n",
+  },
+  {
+    name: "Investigation",
+    body: "# Điều tra: <vấn đề>\n\n## Hiện tượng\n\n## Giả thuyết\n\n- [ ] \n\n## Phát hiện\n\n## Kết luận\n\n",
+  },
+  {
+    name: "Meeting note",
+    body: "# Meeting: <chủ đề>\n\n- Ngày: \n- Tham gia: \n\n## Nội dung\n\n## Action items\n\n- [ ] \n",
+  },
+];
+
 const TOOLBAR: { label: string; title: string; edit: (b: string, s: number, e: number) => Edit }[] = [
   { label: "H", title: "Heading", edit: (b, s, e) => prefixLineAt(b, s, e, "## ") },
   { label: "B", title: "Bold (⌘B)", edit: (b, s, e) => wrapAt(b, s, e, "**") },
@@ -290,6 +305,26 @@ export function MdDocEditor({
               style={{ backgroundColor: `${t.color}22`, color: t.color }}
             >
               + #{t.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {!initial ? (
+        <div className="flex flex-wrap items-center gap-xs">
+          <span className="text-caption text-stone">Template:</span>
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => {
+                if (body.trim() && !window.confirm("Thay nội dung bằng template?"))
+                  return;
+                setBody(t.body);
+              }}
+              className="rounded-md border border-hairline px-sm py-xxs text-caption text-steel transition-colors hover:border-primary hover:text-primary"
+            >
+              {t.name}
             </button>
           ))}
         </div>

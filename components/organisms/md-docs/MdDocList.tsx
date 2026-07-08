@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
+import { Select } from "@/components/atoms/Select";
 import { Modal } from "@/components/atoms/Modal";
 import { Pagination } from "@/components/atoms/Pagination";
 import {
@@ -22,6 +23,8 @@ export type MdDocListRow = {
   updatedByName: string | null;
 };
 
+type Sort = "created" | "updated" | "title";
+
 export function MdDocList({
   docs,
   tags,
@@ -32,6 +35,33 @@ export function MdDocList({
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [sort, setSort] = useState<Sort>("created");
+  const [pinned, setPinned] = useState<number[]>([]);
+  const [recent, setRecent] = useState<number[]>([]);
+
+  useEffect(() => {
+    try {
+      const p = localStorage.getItem("md-docs:pinned");
+      const r = localStorage.getItem("md-docs:recent");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (p) setPinned(JSON.parse(p));
+      if (r) setRecent(JSON.parse(r));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function togglePin(id: number) {
+    setPinned((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [id, ...prev];
+      try {
+        localStorage.setItem("md-docs:pinned", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
 
   const colorOf = useMemo(() => {
     const m = new Map<string, string>();
@@ -46,18 +76,35 @@ export function MdDocList({
     return [...s].sort();
   }, [docs]);
 
+  const pinnedSet = new Set(pinned);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return docs.filter((d) => {
+    const matched = docs.filter((d) => {
       if (tagFilter && !d.tags.includes(tagFilter)) return false;
       if (!q) return true;
-      return `${d.title} ${d.body} ${d.tags.join(" ")}`
-        .toLowerCase()
-        .includes(q);
+      return `${d.title} ${d.body} ${d.tags.join(" ")}`.toLowerCase().includes(q);
     });
-  }, [docs, query, tagFilter]);
+    const sorted = [...matched];
+    if (sort === "updated") {
+      sorted.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    } else if (sort === "title") {
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    // Pinned bubble to the top (stable).
+    sorted.sort(
+      (a, b) => Number(pinnedSet.has(b.id)) - Number(pinnedSet.has(a.id)),
+    );
+    return sorted;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs, query, tagFilter, sort, pinned]);
 
   const { page, setPage, totalPages, total, pageItems } = usePaged(filtered, 15);
+
+  const recentDocs = recent
+    .map((id) => docs.find((d) => d.id === id))
+    .filter((d): d is MdDocListRow => Boolean(d))
+    .slice(0, 6);
 
   return (
     <div className="flex flex-col gap-md">
@@ -69,9 +116,18 @@ export function MdDocList({
             setPage(1);
           }}
           placeholder="Tìm doc…"
-          className="max-w-[24rem]"
+          className="max-w-[20rem]"
         />
-        <div className="flex gap-xs">
+        <div className="flex items-center gap-xs">
+          <Select
+            value={sort}
+            onChange={(v) => setSort(v as Sort)}
+            options={[
+              { value: "created", label: "Mới tạo" },
+              { value: "updated", label: "Mới sửa" },
+              { value: "title", label: "A–Z" },
+            ]}
+          />
           <Button
             variant="secondary"
             type="button"
@@ -84,6 +140,21 @@ export function MdDocList({
           </Link>
         </div>
       </div>
+
+      {recentDocs.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-xs">
+          <span className="text-caption text-stone">Gần đây:</span>
+          {recentDocs.map((d) => (
+            <Link
+              key={d.id}
+              href={`/md-docs/${d.id}`}
+              className="max-w-[16rem] truncate rounded-md border border-hairline px-sm py-xxs text-caption text-slate transition-colors hover:border-primary hover:text-primary"
+            >
+              {d.title}
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {allTags.length > 0 ? (
         <div className="flex flex-wrap items-center gap-xs">
@@ -127,12 +198,16 @@ export function MdDocList({
       ) : (
         <div className="flex flex-col gap-xs">
           {pageItems.map((d) => (
-            <Link
+            <div
               key={d.id}
-              href={`/md-docs/${d.id}`}
-              className="flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md transition-colors hover:border-primary"
+              className="relative flex items-center justify-between gap-sm rounded-lg border border-hairline bg-canvas p-md transition-colors hover:border-primary"
             >
-              <div className="flex min-w-0 flex-col gap-xxs">
+              <Link
+                href={`/md-docs/${d.id}`}
+                aria-label={d.title}
+                className="absolute inset-0 rounded-lg"
+              />
+              <div className="pointer-events-none flex min-w-0 flex-col gap-xxs">
                 <span className="truncate text-body-md-medium text-ink">
                   {d.title}
                 </span>
@@ -144,11 +219,26 @@ export function MdDocList({
                   </span>
                 ) : null}
               </div>
-              <span className="shrink-0 text-caption text-stone">
-                {d.updatedByName ? `${d.updatedByName} · ` : ""}
-                {d.updatedAt.toLocaleDateString()}
-              </span>
-            </Link>
+              <div className="relative flex shrink-0 items-center gap-sm">
+                <span className="text-caption text-stone">
+                  {d.updatedByName ? `${d.updatedByName} · ` : ""}
+                  {d.updatedAt.toLocaleDateString()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => togglePin(d.id)}
+                  title={pinnedSet.has(d.id) ? "Bỏ ghim" : "Ghim"}
+                  aria-label={pinnedSet.has(d.id) ? "Bỏ ghim" : "Ghim"}
+                  className={
+                    pinnedSet.has(d.id)
+                      ? "text-brand-warn"
+                      : "text-stone hover:text-steel"
+                  }
+                >
+                  {pinnedSet.has(d.id) ? "★" : "☆"}
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeSlug from "rehype-slug";
 import rehypeHighlight from "rehype-highlight";
 import { remarkCallouts } from "@/components/organisms/release-procedure/remark-callouts";
+import { remarkWikilinks } from "@/components/organisms/md-docs/remark-wikilinks";
 
 // Recursively collect text from a hast node (for the code-block copy button).
 type HastNode = {
@@ -120,6 +128,8 @@ type Props = {
   // Turn single newlines into <br> (remark-breaks). Useful when pasting plain
   // text that isn't strict markdown so line breaks are preserved.
   breaks?: boolean;
+  // When provided, [[Title]] becomes a link to the matching doc.
+  wikiDocs?: { title: string; id: number }[];
 };
 
 // Styling lives in `.markdown-preview` (app/globals.css) so inline vs. block
@@ -129,14 +139,26 @@ export function MarkdownPreview({
   checks,
   onToggleCheck,
   breaks,
+  wikiDocs,
 }: Props) {
+  const remarkPlugins = useMemo(() => {
+    const list: unknown[] = [remarkGfm];
+    if (breaks) list.push(remarkBreaks);
+    list.push(remarkCallouts);
+    if (wikiDocs && wikiDocs.length) {
+      const byTitle = new Map(wikiDocs.map((d) => [d.title.toLowerCase(), d.id]));
+      list.push(remarkWikilinks((t) => byTitle.get(t.toLowerCase()) ?? null));
+    }
+    return list;
+  }, [breaks, wikiDocs]);
+
   return (
     <div className="markdown-preview">
       <ReactMarkdown
         remarkPlugins={
-          breaks
-            ? [remarkGfm, remarkBreaks, remarkCallouts]
-            : [remarkGfm, remarkCallouts]
+          remarkPlugins as ComponentProps<
+            typeof ReactMarkdown
+          >["remarkPlugins"]
         }
         rehypePlugins={[rehypeSlug, [rehypeHighlight, { detect: true }]]}
         components={{

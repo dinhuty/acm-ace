@@ -44,12 +44,28 @@ export default async function MdDocPage({
     .where(and(eq(taskDocs.docId, docId), eq(tasks.userId, user.id)))
     .orderBy(desc(tasks.createdAt));
 
+  // All docs → resolve [[wikilinks]] + compute backlinks (docs that mention this).
+  const allDocs = await db
+    .select({ id: mdDocs.id, title: mdDocs.title, body: mdDocs.body })
+    .from(mdDocs);
+  const wikiDocs = allDocs.map((d) => ({ id: d.id, title: d.title }));
+  const needle = `[[${doc.title.toLowerCase()}]]`;
+  const backlinks = allDocs
+    .filter((d) => d.id !== doc.id && d.body.toLowerCase().includes(needle))
+    .map((d) => ({ id: d.id, title: d.title }));
+
   return (
     <div className="flex flex-col gap-md">
       <Link href="/md-docs" className="text-caption text-stone hover:underline">
         ← Markdown Docs
       </Link>
-      <MdDocView doc={doc} tags={tags} linkedTasks={linkedTasks} />
+      <MdDocView
+        doc={doc}
+        tags={tags}
+        linkedTasks={linkedTasks}
+        backlinks={backlinks}
+        wikiDocs={wikiDocs}
+      />
     </div>
   );
 }

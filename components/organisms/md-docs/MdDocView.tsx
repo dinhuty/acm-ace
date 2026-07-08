@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteMdDoc } from "@/app/(app)/md-docs/actions";
@@ -23,13 +23,29 @@ export function MdDocView({
   doc,
   tags,
   linkedTasks,
+  backlinks,
+  wikiDocs,
 }: {
   doc: MdDocViewData;
   tags: MdTagDef[];
   linkedTasks: { id: number; title: string }[];
+  backlinks: { id: number; title: string }[];
+  wikiDocs: { id: number; title: string }[];
 }) {
   const colorOf = new Map(tags.map((t) => [t.name, t.color]));
   const headings = useMemo(() => extractHeadings(doc.body), [doc.body]);
+
+  // Track "recently viewed" for the list page (MRU, capped).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("md-docs:recent");
+      const arr: number[] = raw ? JSON.parse(raw) : [];
+      const next = [doc.id, ...arr.filter((x) => x !== doc.id)].slice(0, 12);
+      localStorage.setItem("md-docs:recent", JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  }, [doc.id]);
   const [showRaw, setShowRaw] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -74,6 +90,11 @@ export function MdDocView({
             Raw
           </Button>
           <CopyButton text={doc.body} label="Copy markdown" />
+          <Link href={`/md-docs/${doc.id}/history`}>
+            <Button variant="secondary" type="button">
+              Lịch sử
+            </Button>
+          </Link>
           <Link href={`/md-docs/${doc.id}/edit`}>
             <Button variant="secondary" type="button">
               Edit
@@ -92,7 +113,7 @@ export function MdDocView({
               {doc.body}
             </pre>
           ) : (
-            <MarkdownPreview markdown={doc.body} breaks />
+            <MarkdownPreview markdown={doc.body} breaks wikiDocs={wikiDocs} />
           )}
         </div>
         {!showRaw && headings.length >= 2 ? (
@@ -127,6 +148,25 @@ export function MdDocView({
                 className="rounded-md border border-hairline px-sm py-xxs font-mono text-body-sm text-slate transition-colors hover:border-primary hover:text-primary"
               >
                 {t.title}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {backlinks.length > 0 ? (
+        <div className="flex flex-col gap-xs rounded-lg border border-hairline bg-canvas p-md">
+          <span className="text-body-sm-medium text-slate">
+            Được nhắc tới trong ({backlinks.length})
+          </span>
+          <div className="flex flex-wrap gap-xs">
+            {backlinks.map((d) => (
+              <Link
+                key={d.id}
+                href={`/md-docs/${d.id}`}
+                className="rounded-md border border-hairline px-sm py-xxs text-body-sm text-slate transition-colors hover:border-primary hover:text-primary"
+              >
+                {d.title}
               </Link>
             ))}
           </div>

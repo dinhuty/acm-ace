@@ -197,6 +197,23 @@ export const mdTags = pgTable("md_tags", {
     .notNull(),
 });
 
+// Version history: a snapshot of an md doc's prior state, saved on each edit.
+export const mdDocRevisions = pgTable("md_doc_revisions", {
+  id: serial("id").primaryKey(),
+  docId: integer("doc_id")
+    .notNull()
+    .references(() => mdDocs.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  tags: jsonb("tags").notNull().$type<string[]>().default(sql`'[]'::jsonb`),
+  savedBy: integer("saved_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // Many-to-many link between personal tasks and shared md docs.
 export const taskDocs = pgTable(
   "task_docs",
@@ -217,4 +234,5 @@ export type ReleaseProcedure = typeof releaseProcedures.$inferSelect;
 export type SqlSnippet = typeof sqlSnippets.$inferSelect;
 export type MdDoc = typeof mdDocs.$inferSelect;
 export type MdTag = typeof mdTags.$inferSelect;
+export type MdDocRevision = typeof mdDocRevisions.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

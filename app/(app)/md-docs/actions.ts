@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { mdDocs, mdTags } from "@/db/schema";
+import { mdDocs, mdTags, mdDocRevisions } from "@/db/schema";
 import { requireUser } from "@/lib/auth/dal";
 
 export type MdDocInput = {
@@ -45,20 +45,37 @@ export async function updateMdDoc(
   const d = normalize(input);
   if (!d.title) return { ok: false, error: "Tiêu đề là bắt buộc." };
 
+  const [cur] = await db
+    .select({
+      title: mdDocs.title,
+      body: mdDocs.body,
+      tags: mdDocs.tags,
+      updatedBy: mdDocs.updatedBy,
+      updatedAt: mdDocs.updatedAt,
+    })
+    .from(mdDocs)
+    .where(eq(mdDocs.id, id))
+    .limit(1);
+  if (!cur) return { ok: false, error: "Không tìm thấy doc." };
+
   // Conflict guard: someone else may have saved since this editor loaded.
-  if (opts?.baseUpdatedAt && !opts.force) {
-    const [cur] = await db
-      .select({ updatedAt: mdDocs.updatedAt })
-      .from(mdDocs)
-      .where(eq(mdDocs.id, id))
-      .limit(1);
-    if (cur && cur.updatedAt.getTime() > opts.baseUpdatedAt) {
-      return {
-        ok: false,
-        conflict: true,
-        error: "Người khác vừa sửa doc này. Tải lại để xem, hoặc bấm Ghi đè.",
-      };
-    }
+  if (opts?.baseUpdatedAt && !opts.force && cur.updatedAt.getTime() > opts.baseUpdatedAt) {
+    return {
+      ok: false,
+      conflict: true,
+      error: "Người khác vừa sửa doc này. Tải lại để xem, hoặc bấm Ghi đè.",
+    };
+  }
+
+  // Snapshot the prior version (only when content actually changes).
+  if (cur.title !== d.title || cur.body !== d.body) {
+    await db.insert(mdDocRevisions).values({
+      docId: id,
+      title: cur.title,
+      body: cur.body,
+      tags: cur.tags,
+      savedBy: cur.updatedBy ?? null,
+    });
   }
 
   await db
@@ -68,6 +85,24 @@ export async function updateMdDoc(
   revalidatePath("/md-docs");
   revalidatePath(`/md-docs/${id}`);
   return { ok: true, id };
+}
+
+export async function restoreMdDocRevision(
+  docId: number,
+  revisionId: number,
+): Promise<MdDocResult> {
+  await requireUser();
+  const [rev] = await db
+    .select()
+    .from(mdDocRevisions)
+    .where(and(eq(mdDocRevisions.id, revisionId), eq(mdDocRevisions.docId, docId)))
+    .limit(1);
+  if (!rev) return { ok: false, error: "Không tìm thấy phiên bản." };
+  return updateMdDoc(
+    docId,
+    { title: rev.title, body: rev.body, tags: rev.tags },
+    { force: true },
+  );
 }
 
 export async function deleteMdDoc(id: number): Promise<MdDocResult> {
